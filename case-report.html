@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결과보고서 작성기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --ink:#1E2A22; --ink-soft:#55645A; --ink-faint:#8B978C;
+  --paper:#F2F5EE; --surface:#FFFFFF; --surface-2:#EAF0E5;
+  --line:#D9E1D2; --line-strong:#C2CDB9;
+  --accent:#2E6F5E; --accent-ink:#FFFFFF; --accent-soft:#E3F0EA;
+  --accent-2:#9C7A2E; --accent-2-soft:#F3EAD3;
+  --danger:#AF4A34; --danger-soft:#F6E4DE;
+  --focus:#2E6F5E;
+  --shadow: 0 1px 2px rgba(30,42,34,.06), 0 8px 24px -12px rgba(30,42,34,.18);
+  --sheet-bg:#FFFFFF; --sheet-ink:#232B22; --sheet-ink-soft:#5B6455;
+  --sheet-line:#D7DECD; --sheet-accent:#2E6F5E; --sheet-accent-soft:#E7F0EA;
+  --sheet-gold:#93732B; --sheet-gold-soft:#F2EAD4; --sheet-neutral:#6B7A70; --sheet-neutral-soft:#EEF1EC;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E7ECE3; --ink-soft:#AAB6A3; --ink-faint:#77836F;
+    --paper:#131712; --surface:#1B211A; --surface-2:#222A1F;
+    --line:#2B342A; --line-strong:#3A4638;
+    --accent:#6BC2A4; --accent-ink:#0E1A15; --accent-soft:#1E2E28;
+    --accent-2:#D8AE5C; --accent-2-soft:#33291A;
+    --danger:#E38468; --danger-soft:#3A241D;
+    --focus:#6BC2A4;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E7ECE3; --ink-soft:#AAB6A3; --ink-faint:#77836F;
+  --paper:#131712; --surface:#1B211A; --surface-2:#222A1F;
+  --line:#2B342A; --line-strong:#3A4638;
+  --accent:#6BC2A4; --accent-ink:#0E1A15; --accent-soft:#1E2E28;
+  --accent-2:#D8AE5C; --accent-2-soft:#33291A;
+  --danger:#E38468; --danger-soft:#3A241D;
+  --focus:#6BC2A4;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;}
+html,body{margin:0; padding:0;}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Noto Sans KR",system-ui,sans-serif;
+  font-size:14.5px; line-height:1.6;
+}
+h1,h2,h3{font-family:"Noto Serif KR",serif; text-wrap:balance; margin:0;}
+button{font-family:inherit;}
+input,textarea,select{font-family:inherit; font-size:inherit; color:inherit;}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+.app{display:flex; flex-direction:column; min-height:100vh;}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--line);
+}
+.brand{display:flex; align-items:baseline; gap:8px; margin-right:auto;}
+.brand .mark{
+  width:30px; height:30px; border-radius:7px; background:var(--accent); color:var(--accent-ink);
+  display:flex; align-items:center; justify-content:center; font-family:"Noto Serif KR",serif;
+  font-weight:700; font-size:15px; flex:none;
+}
+.brand h1{font-size:18px; font-weight:700;}
+.brand span.sub{color:var(--ink-soft); font-size:12.5px;}
+.toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.btn{
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+  padding:8px 13px; border-radius:8px; font-size:13.5px; font-weight:600; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px; transition:background .12s,border-color .12s;
+}
+.btn:hover{background:var(--surface-2);}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+.btn-primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.btn-primary:hover{filter:brightness(1.06);}
+.btn-ghost{border-color:transparent; background:transparent;}
+.btn-ghost:hover{background:var(--surface-2);}
+.status{font-size:12px; color:var(--ink-faint); min-width:96px;}
+
+/* ---------- workspace ---------- */
+.workspace{display:flex; flex:1; min-height:0;}
+.form-pane, .preview-pane{height:calc(100vh - 57px); overflow-y:auto;}
+.form-pane{width:500px; flex:none; padding:18px; border-right:1px solid var(--line);}
+.preview-pane{flex:1; padding:32px 24px; display:flex; flex-direction:column; align-items:center;}
+.hint{
+  font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line);
+  border-radius:8px; padding:9px 12px; margin-bottom:14px;
+}
+
+.group{
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:16px; margin-bottom:14px; box-shadow:var(--shadow);
+}
+.group h2{
+  font-size:14px; font-weight:700; color:var(--ink); margin-bottom:12px;
+  padding-left:10px; border-left:3px solid var(--accent);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.group h2 small{font-family:"Noto Sans KR",sans-serif; font-weight:500; color:var(--ink-faint); font-size:11.5px;}
+.field{margin-bottom:11px;}
+.field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px;}
+.field input, .field textarea{
+  width:100%; border:1px solid var(--line-strong); background:var(--paper); color:var(--ink);
+  border-radius:7px; padding:8px 10px; resize:vertical;
+}
+.field textarea{min-height:64px; line-height:1.55;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+.dyn-row{
+  border:1px solid var(--line); border-radius:9px; padding:10px; margin-bottom:8px; background:var(--paper);
+}
+.dyn-row .dyn-grid{display:grid; grid-template-columns:150px 1fr; gap:8px; margin-bottom:8px; align-items:center;}
+.dyn-row .dyn-grid input{width:100%; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:6px; padding:6px 8px; font-size:13px;}
+.dyn-row .session-no{font-size:12px; font-weight:700; color:var(--accent); font-family:"IBM Plex Mono",monospace;}
+.soap-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;}
+.soap-field{display:flex; flex-direction:column; gap:3px;}
+.soap-field span{font-size:10.5px; font-weight:700; color:var(--ink-soft);}
+.soap-field span.tag-s{color:var(--accent);} .soap-field span.tag-o{color:var(--accent);}
+.soap-field span.tag-a{color:var(--accent-2);} .soap-field span.tag-p{color:var(--ink-faint);}
+.soap-field textarea{
+  width:100%; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+  border-radius:6px; padding:6px 8px; font-size:12.5px; min-height:52px; resize:vertical;
+}
+.score-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:6px; margin-bottom:8px;}
+.score-field{display:flex; flex-direction:column; gap:3px;}
+.score-field span{font-size:10px; font-weight:700; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.score-field input{border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:6px; padding:5px 6px; font-size:12.5px; width:100%;}
+.dyn-row .dyn-foot{display:flex; justify-content:flex-end; align-items:center; gap:8px;}
+.rm-btn{
+  border:none; background:transparent; color:var(--danger); cursor:pointer; font-size:12px; font-weight:600;
+  padding:3px 6px; border-radius:5px;
+}
+.rm-btn:hover{background:var(--danger-soft);}
+.add-btn{
+  width:100%; border:1px dashed var(--line-strong); background:transparent; color:var(--accent);
+  padding:8px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;
+}
+.add-btn:hover{background:var(--accent-soft);}
+.goal-row{display:flex; gap:8px; align-items:center; margin-bottom:7px;}
+.goal-row input{flex:1; border:1px solid var(--line-strong); background:var(--paper); color:var(--ink); border-radius:6px; padding:7px 9px; font-size:13px;}
+.muted-note{font-size:12px; color:var(--ink-faint); padding:6px 2px;}
+
+/* ---------- sheet (report) ---------- */
+.sheet{
+  width:100%; max-width:800px; background:var(--sheet-bg); color:var(--sheet-ink);
+  box-shadow:var(--shadow); border-radius:3px; padding:52px 58px 60px;
+  font-family:"Noto Sans KR",sans-serif;
+}
+.sheet .doc-eyebrow{
+  text-align:center; font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.14em;
+  color:var(--sheet-accent); font-weight:600; margin-bottom:10px;
+}
+.sheet h1.doc-title{text-align:center; font-size:24px; font-weight:700; color:var(--sheet-ink); margin-bottom:6px;}
+.sheet .doc-sub{text-align:center; font-size:12.5px; color:var(--sheet-ink-soft); margin-bottom:22px;}
+.sheet .doc-rule{height:2px; background:var(--sheet-accent); margin-bottom:24px;}
+
+.info-table{width:100%; border-collapse:collapse; margin-bottom:26px; font-size:13px;}
+.info-table th, .info-table td{border:1px solid var(--sheet-line); padding:8px 12px; text-align:left; vertical-align:top;}
+.info-table th{background:var(--sheet-accent-soft); color:var(--sheet-ink); width:96px; font-weight:600; white-space:nowrap;}
+.info-table td{background:var(--sheet-bg);}
+
+.sheet h2.sec{font-size:15px; font-weight:700; color:var(--sheet-ink); margin:26px 0 10px; display:flex; align-items:baseline; gap:8px;}
+.sheet h2.sec .num{font-family:"IBM Plex Mono",monospace; color:var(--sheet-accent); font-size:13px; font-weight:600;}
+.sheet p.body-text{font-size:13.2px; color:var(--sheet-ink); line-height:1.75; white-space:pre-wrap;}
+.goal-list{margin:8px 0 0; padding-left:4px; font-size:13.2px; color:var(--sheet-ink); line-height:1.85; list-style:none; counter-reset:goal;}
+.goal-list li{margin-bottom:2px; counter-increment:goal; padding-left:22px; text-indent:-22px;}
+.goal-list li::before{content:counter(goal) ") "; font-weight:700; color:var(--sheet-accent);}
+
+.sess-table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:4px;}
+.sess-table th{background:var(--sheet-accent); color:#fff; padding:7px 8px; text-align:left; font-weight:600;}
+.sess-table td{border:1px solid var(--sheet-line); padding:7px 8px; color:var(--sheet-ink); vertical-align:top;}
+.sess-table tr:nth-child(even) td{background:var(--sheet-accent-soft);}
+.sess-table .so-line{margin-bottom:3px;}
+.sess-table .so-line:last-child{margin-bottom:0;}
+.sess-table .so-line b{color:var(--sheet-accent); margin-right:4px;}
+.chip-cell{display:flex; flex-wrap:wrap; gap:4px;}
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600; background:var(--sheet-gold-soft); color:var(--sheet-gold); border-radius:4px; padding:2px 6px; white-space:nowrap;}
+
+.soap-card{border:1px solid var(--sheet-line); border-radius:8px; padding:12px 14px; margin-bottom:9px;}
+.soap-card .sc-head{font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600; color:var(--sheet-ink-soft); margin-bottom:8px;}
+.soap-row{display:flex; gap:10px; margin-bottom:7px;}
+.soap-row:last-child{margin-bottom:0;}
+.soap-tag{
+  flex:none; width:22px; height:22px; border-radius:5px; display:flex; align-items:center; justify-content:center;
+  font-family:"IBM Plex Mono",monospace; font-weight:700; font-size:11px;
+}
+.soap-tag.s, .soap-tag.o{background:var(--sheet-accent-soft); color:var(--sheet-accent);}
+.soap-tag.a{background:var(--sheet-gold-soft); color:var(--sheet-gold);}
+.soap-tag.p{background:var(--sheet-neutral-soft); color:var(--sheet-neutral);}
+.soap-row p{margin:0; font-size:12.6px; color:var(--sheet-ink); line-height:1.65; white-space:pre-wrap; padding-top:2px;}
+
+.stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:10px; margin-top:6px;}
+.stat-tile{border:1px solid var(--sheet-line); border-left:3px solid var(--sheet-accent); border-radius:6px; padding:10px 12px; background:var(--sheet-bg);}
+.stat-tile .v{font-family:"IBM Plex Mono",monospace; font-size:17px; font-weight:600; color:var(--sheet-ink); font-variant-numeric:tabular-nums;}
+.stat-tile .l{font-size:11px; color:var(--sheet-ink-soft); margin-top:2px;}
+
+.scale-block{border:1px solid var(--sheet-line); border-radius:8px; padding:13px 15px; margin-bottom:10px;}
+.scale-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.scale-name{font-weight:700; font-size:13.5px; color:var(--sheet-ink);}
+.scale-name small{font-family:"Noto Sans KR",sans-serif; font-weight:500; color:var(--sheet-ink-soft); font-size:11px; margin-left:2px;}
+.scale-nums{font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--sheet-ink); font-variant-numeric:tabular-nums;}
+.scale-nums .delta{color:var(--sheet-gold); font-weight:600; margin-left:5px;}
+.trend-wrap{margin-top:10px;}
+.trend{display:flex; align-items:flex-end; gap:3px; height:40px;}
+.tbar{flex:1; background:var(--sheet-accent); border-radius:2px 2px 0 0; min-width:4px;}
+.trend-labels{display:flex; gap:3px; margin-top:3px;}
+.tlbl{flex:1; text-align:center; font-size:9px; font-family:"IBM Plex Mono",monospace; color:var(--sheet-ink-soft); white-space:nowrap;}
+.scale-note{font-size:12.6px; color:var(--sheet-ink); white-space:pre-wrap; margin-top:9px; line-height:1.75; border-top:1px dashed var(--sheet-line); padding-top:8px;}
+
+.review-block{margin-bottom:15px;}
+.review-block .rb-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px;}
+.review-block h3{font-size:13px; font-weight:700; color:var(--sheet-accent);}
+.review-block p{font-size:13px; color:var(--sheet-ink); white-space:pre-wrap; line-height:1.78;}
+.copy-mini{
+  border:1px solid var(--sheet-line); background:var(--sheet-bg); color:var(--sheet-ink-soft);
+  font-size:11px; padding:3px 8px; border-radius:6px; cursor:pointer;
+}
+.copy-mini:hover{background:var(--sheet-accent-soft); color:var(--sheet-accent);}
+
+.empty-note{color:var(--sheet-ink-soft); font-size:12.5px; font-style:italic;}
+
+/* ---------- tabs (mobile) ---------- */
+.tabs{display:none;}
+.tabs button{flex:1; border:none; background:var(--surface); color:var(--ink-soft); padding:10px; font-weight:700; font-size:13px; border-bottom:2px solid transparent; cursor:pointer;}
+.tabs button.active{color:var(--accent); border-bottom-color:var(--accent);}
+
+/* ---------- modal ---------- */
+.modal-backdrop{position:fixed; inset:0; background:rgba(10,14,10,.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;}
+.modal-backdrop[hidden]{display:none;}
+.modal{background:var(--surface); border:1px solid var(--line); border-radius:14px; width:100%; max-width:440px; max-height:80vh; display:flex; flex-direction:column; box-shadow:var(--shadow);}
+.modal-head{display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--line);}
+.modal-head h3{font-size:15.5px; font-weight:700;}
+.modal-body{overflow-y:auto; padding:8px 10px;}
+.report-item{display:flex; align-items:center; gap:10px; padding:10px 8px; border-radius:9px; cursor:pointer;}
+.report-item:hover{background:var(--surface-2);}
+.report-item .ri-main{flex:1; min-width:0;}
+.report-item .ri-title{font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.report-item .ri-sub{font-size:11.5px; color:var(--ink-faint);}
+.empty-list{padding:24px 14px; text-align:center; color:var(--ink-faint); font-size:13px;}
+
+@media (max-width: 900px){
+  .form-pane, .preview-pane{width:100%; height:auto;}
+  .workspace{flex-direction:column;}
+  .tabs{display:flex; position:sticky; top:57px; z-index:15; background:var(--surface); border-bottom:1px solid var(--line);}
+  .workspace.tab-form .preview-pane{display:none;}
+  .workspace.tab-preview .form-pane{display:none;}
+  .sheet{padding:30px 20px;}
+  .soap-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">結</div>
+      <div>
+        <h1>결과보고서 작성기</h1>
+        <span class="sub">회기별 SOAP 일지를 입력하면 결과보고서로 정리해드려요</span>
+      </div>
+    </div>
+    <div class="toolbar">
+      <span class="status" id="statusText"></span>
+      <button class="btn" id="btnNew" type="button">새로 작성</button>
+      <button class="btn" id="btnLoad" type="button">불러오기</button>
+      <button class="btn btn-primary" id="btnSave" type="button">저장</button>
+      <button class="btn" id="btnCopyAll" type="button">보고서 전체 복사</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button type="button" data-tab="form" class="active">입력</button>
+    <button type="button" data-tab="preview">미리보기</button>
+  </nav>
+
+  <div class="workspace tab-form" id="workspace">
+    <section class="form-pane" id="formPane">
+      <div class="hint">예시 데이터(가상 사례)로 미리 채워져 있어요. 이 앱은 브라우저에만 저장돼요(이 기기·이 브라우저 한정) — 저장한 내용은 서버나 깃허브로 전송되지 않아요.</div>
+
+      <div class="group">
+        <h2>기본 정보</h2>
+        <div class="field"><label>프로그램명</label><input data-field="programName" id="f_programName"></div>
+        <div class="row2">
+          <div class="field"><label>시작일</label><input type="date" data-field="periodStart" id="f_periodStart"></div>
+          <div class="field"><label>종료일</label><input type="date" data-field="periodEnd" id="f_periodEnd"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>장소</label><input data-field="location" id="f_location"></div>
+          <div class="field"><label>강사</label><input data-field="instructor" id="f_instructor"></div>
+        </div>
+        <div class="field"><label>대상 (등록회원명 / 나이·성별·진단명 등)</label><input data-field="clientInfo" id="f_clientInfo"></div>
+        <div class="field"><label>작성자</label><input data-field="authorName" id="f_authorName"></div>
+      </div>
+
+      <div class="group">
+        <h2>01 목적 및 목표</h2>
+        <div class="field"><label>목적</label><textarea data-field="purpose" id="f_purpose" placeholder="개입 목적을 적어주세요."></textarea></div>
+        <div class="field"><label>목표</label></div>
+        <div id="goalsList"></div>
+        <button class="add-btn" type="button" data-action="add-goal">+ 목표 추가</button>
+      </div>
+
+      <div class="group">
+        <h2>02 진행일정 및 내용 <small>회기별 SOAP 일지</small></h2>
+        <div class="muted-note" style="margin-top:-4px; margin-bottom:10px;">S(주관적 정보)·O(객관적 정보)는 진행일정표의 사실 요약에, 전체 내용은 "회기별 상담기록"에 쓰여요. 척도 점수는 측정한 회기에만 입력하면 돼요.</div>
+        <div id="sessionsList"></div>
+        <button class="add-btn" type="button" data-action="add-session">+ 회기 추가</button>
+      </div>
+
+      <div class="group">
+        <h2>참여자평가 <small>개별평가 작성</small></h2>
+        <div id="scaleNotesArea"></div>
+      </div>
+
+      <div class="group">
+        <h2>05 진행자 평가</h2>
+        <div class="field"><label>[프로그램 진행]</label><textarea data-field="reviewProgress" id="f_reviewProgress"></textarea></div>
+        <div class="field"><label>[증상 및 상태 변화]</label><textarea data-field="reviewChange" id="f_reviewChange"></textarea></div>
+        <div class="field"><label>[종합평가]</label><textarea data-field="reviewOverall" id="f_reviewOverall"></textarea></div>
+      </div>
+    </section>
+
+    <section class="preview-pane" id="previewPane">
+      <div class="sheet" id="sheet"></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="loadModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>저장된 보고서 불러오기</h3>
+        <button class="btn btn-ghost" id="btnCloseModal" type="button">닫기</button>
+      </div>
+      <div class="modal-body" id="reportList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DRAFT_KEY = "crw_draft_v1";
+  var LIST_KEY = "crw_reports_v1";
+
+  var SCALES = [
+    {key:"mhsdr", label:"MHS:DR", full:"우울평가"},
+    {key:"pss", label:"PSS", full:"지각된 스트레스 척도"},
+    {key:"gol", label:"GOL", full:""},
+    {key:"krs", label:"한국형 회복척도", full:""},
+    {key:"satisfaction", label:"만족도설문", full:""}
+  ];
+
+  function uid(){ return "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function fmtDateDot(iso){
+    if(!iso) return "";
+    var p = iso.split("-");
+    if(p.length !== 3) return iso;
+    return p[0] + ". " + Number(p[1]) + ". " + Number(p[2]) + ".";
+  }
+  function fmtDelta(n){
+    if(Number.isInteger(n)) return (n>0?"+":"") + n;
+    return (n>0?"+":"") + n.toFixed(1);
+  }
+
+  function blankSession(){
+    return {date:"", soap:{s:"",o:"",a:"",p:""}, scores:{mhsdr:"",pss:"",gol:"",krs:"",satisfaction:""}};
+  }
+  function blankScaleNotes(){ return {mhsdr:"",pss:"",gol:"",krs:"",satisfaction:""}; }
+  function blankState(){
+    return {
+      id:null,
+      programName:"", periodStart:"", periodEnd:"", location:"", instructor:"",
+      clientInfo:"", authorName:"",
+      purpose:"", goals:[""],
+      sessions:[blankSession()],
+      scaleNotes:blankScaleNotes(),
+      reviewProgress:"", reviewChange:"", reviewOverall:"",
+      updatedAt:null
+    };
+  }
+
+  function sampleState(){
+    function s(date, soap, scores){
+      var sc = {mhsdr:"",pss:"",gol:"",krs:"",satisfaction:""};
+      Object.assign(sc, scores || {});
+      var so = {s:"",o:"",a:"",p:""};
+      Object.assign(so, soap || {});
+      return {date:date, soap:so, scores:sc};
+    }
+    return {
+      id:null,
+      programName:"우울증 행동활성화 프로그램",
+      periodStart:"2025-05-21", periodEnd:"2025-10-02",
+      location:"센터장실 및 상담실", instructor:"이지은 사회복지사",
+      clientInfo:"등록회원 홍○○ (60대 / F / 2형 양극성장애) — 예시(가상 사례)",
+      authorName:"이지은",
+      purpose:"우울 증상으로 인한 무기력 및 활동 저하를 보이는 대상자를 대상으로, 행동활성화 개입을 통해 일상 활동량을 회복하고 정서적 안정을 도모한다.",
+      goals:[
+        "대상자가 자신의 일상 활동 수준을 인식하고, 기본적인 일상활동을 유지한다.",
+        "행동활성화를 통해 우울감을 완화하고 정서적 안정을 도모한다."
+      ],
+      sessions:[
+        s("2025-05-21", {s:"프로그램에 처음 참여하는 것에 대해 약간 긴장된다고 표현함.", o:"프로그램 안내 및 우울증·행동활성화 정보 제공, 프로그램 규칙 설정, 활동기록지 작성 방법 안내함."}, {}),
+        s("2025-05-29", {s:"활동기록지 작성이 번거롭게 느껴진다고 이야기함.", o:"지난 회기 활동기록지 검토, 기록 방식을 감정달력으로 변경 안내함."}, {}),
+        s("2025-06-12", {s:"요즘 아침에 일어나는 게 더 힘들다고 호소함.", o:"우울평가 실시, 감정달력 작성 내용 검토, 기록방식을 활동기록지로 재변경 제안, 기분이 나아지는 활동 함께 탐색함.", a:"초기 대비 우울감이 다소 높게 측정되나 활동 탐색에는 협조적임.", p:"다음 회기까지 활동기록지 작성 지속, 삶의 가치 및 목표 작성 예정."}, {mhsdr:"13", pss:"22"}),
+        s("2025-06-19", {s:"예전에 좋아했던 산책을 다시 해보고 싶다고 말함.", o:"우울평가, 활동기록지 검토, 삶의 가치평가 및 목표(원하는 모습) 작성함."}, {mhsdr:"10"}),
+        s("2025-06-25", {s:"이번 주 컨디션이 좋지 않았다고 표현함.", o:"우울평가, 활동기록지 검토.", a:"일시적으로 우울감이 상승한 것으로 평가되며, 원인 탐색이 필요함.", p:"다음 회기에 최근 스트레스 요인을 함께 확인하기로 함."}, {mhsdr:"21"}),
+        s("2025-07-03", {s:"지난주보다는 조금 나아진 것 같다고 표현함.", o:"우울평가, 활동기록지 검토."}, {mhsdr:"16"}),
+        s("2025-07-11", {s:"활동목표를 세우는 게 도움이 될 것 같다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 계획 수립."}, {mhsdr:"15"}),
+        s("2025-07-17", {s:"계획한 활동을 실제로 해봤다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토 및 새 활동목표 계획.", a:"계획한 활동 실행 후 기분 개선을 스스로 인식하는 모습 관찰됨.", p:"다음 회기까지 목표 활동 유지."}, {mhsdr:"10"}),
+        s("2025-07-24", {s:"이번 주는 생각만큼 활동을 못 했다고 아쉬워함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토 및 계획 재조정."}, {mhsdr:"16"}),
+        s("2025-07-31", {s:"날씨가 더워서 외출이 줄었다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토 및 계획."}, {mhsdr:"15"}),
+        s("2025-08-08", {s:"본인의 강점에 대해 생각해본 적이 없었다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토, 강점찾기 활동 진행.", a:"강점찾기 활동을 통해 자기효능감이 다소 향상된 것으로 관찰됨.", p:"이후 회기에서 강점을 활동목표와 연결해보기로 함."}, {mhsdr:"13"}),
+        s("2025-08-18", {s:"활동 후 기분이 좋아졌던 경험을 나눔.", o:"우울평가, 활동기록지 검토, 긍정적 감정 경험 공유 및 강화, 활동목표 계획."}, {mhsdr:"15"}),
+        s("2025-09-19", {s:"신체건강 문제로 몇 주간 참여가 어려웠다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토 및 계획.", a:"일시 중단 기간에도 활동 수준의 큰 저하는 없었던 것으로 확인됨."}, {mhsdr:"13"}),
+        s("2025-10-02", {s:"프로그램을 통해 활동을 유지하는 습관이 생긴 것 같다고 이야기함.", o:"우울평가, 활동기록지 검토, 활동목표 점검표 검토, 프로그램 만족도 설문 진행.", a:"프로그램 종료 시점 기준 우울감이 비교적 안정적으로 유지되고 있음.", p:"프로그램 종료 후 지속가능한 활동 유지 방안을 함께 탐색함."}, {mhsdr:"12", pss:"28", satisfaction:"4.6"})
+      ],
+      scaleNotes:{
+        mhsdr:"3회기부터 14회기까지 13점에서 10점 수준으로 비교적 낮은 점수를 유지하였으나, 5회기에서 21점으로 일시적인 우울감 악화가 있었음. 이후 회기에서는 10~16점 범위 내에서 등락이 있었으나, 회기 후반에 13점 전후의 수준으로 유지되는 양상이 관찰됨.",
+        pss:"사전평가에 비해 사후평가가 상승함. 이는 대상자가 일상생활에서 경험하는 스트레스를 이전보다 더 많이 인식하고 있다고 보여짐.",
+        gol:"", krs:"",
+        satisfaction:"대상자의 만족도 평균은 4.6점으로, 증상조절에 도움이 되었다는 응답과 함께 전반적인 프로그램 만족도에도 긍정적으로 응답함."
+      },
+      reviewProgress:"대상자는 전반적으로 이해도와 집중력이 낮아 프로그램 구조와 내용을 이해하고 적응하는 데 비교적 많은 시간이 소요됨. 이에 전체 회기 동안 활동기록지 작성 방법을 반복적으로 설명하며 진행함. 한편 12회기 이후 신체건강 문제로 프로그램이 일시적으로 중단되었으나, 이후 회기에서도 활동수준의 유의미한 변화는 관찰되지 않아 14회기로 프로그램을 마무리함.",
+      reviewChange:"프로그램 전반에 걸쳐 일상 활동 유지 및 실행이 지속되었으며, 특히 외출·프로그램 참여 등 기본적인 활동 수준이 꾸준히 유지됨. 활동량의 증가는 제한적이었으나, 우울감과 스트레스가 존재함에도 활동을 중단하지 않고 유지한 점에서 유의미한 변화가 있었다고 평가됨.",
+      reviewOverall:"2형 양극성장애로 주로 우울감과 무기력감을 호소하는 대상자를 대상으로, 우울감 완화와 일상 활동 유지를 도모하고자 행동활성화 프로그램을 진행함. 회기 진행 과정에서 일시적인 우울감 상승이 관찰되었으나, 프로그램 후반부로 갈수록 비교적 안정적인 수준을 유지하였음. 향후 면담을 통해 대상자의 상태를 지속적으로 모니터링하며 일상 활동 수준이 유지될 수 있도록 지원할 계획임.",
+      updatedAt:null
+    };
+  }
+
+  var state = null;
+
+  function loadDraft(){
+    try{ var raw = localStorage.getItem(DRAFT_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+    return null;
+  }
+  function saveDraft(){
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function readMap(){
+    try{ var raw = localStorage.getItem(LIST_KEY); return raw ? JSON.parse(raw) : {}; }catch(e){ return {}; }
+  }
+  function writeMap(map){
+    try{ localStorage.setItem(LIST_KEY, JSON.stringify(map)); }catch(e){}
+  }
+  function listReports(){
+    var map = readMap();
+    return Object.keys(map).map(function(k){ return map[k]; })
+      .sort(function(a,b){ return (b.updatedAt||"").localeCompare(a.updatedAt||""); });
+  }
+  function saveReport(r){
+    r.updatedAt = new Date().toISOString();
+    var map = readMap();
+    var id = r.id || uid();
+    r.id = id;
+    map[id] = r;
+    writeMap(map);
+    return id;
+  }
+  function loadReportById(id){ var map = readMap(); return map[id] || null; }
+  function deleteReportById(id){ var map = readMap(); delete map[id]; writeMap(map); }
+
+  state = loadDraft() || sampleState();
+
+  // ---------- DOM refs ----------
+  var sessionsList = document.getElementById("sessionsList");
+  var goalsList = document.getElementById("goalsList");
+  var scaleNotesArea = document.getElementById("scaleNotesArea");
+  var sheet = document.getElementById("sheet");
+  var formPane = document.getElementById("formPane");
+  var statusText = document.getElementById("statusText");
+
+  var SCALAR_FIELDS = ["programName","periodStart","periodEnd","location","instructor",
+    "clientInfo","authorName","purpose","reviewProgress","reviewChange","reviewOverall"];
+
+  function fillScalarInputs(){
+    SCALAR_FIELDS.forEach(function(f){
+      var el = document.getElementById("f_" + f);
+      if(el) el.value = state[f] == null ? "" : state[f];
+    });
+  }
+
+  function renderGoals(){
+    goalsList.innerHTML = state.goals.map(function(g, i){
+      return '<div class="goal-row">' +
+        '<input type="text" data-array="goals" data-index="'+i+'" value="'+escapeHtml(g)+'" placeholder="목표 '+(i+1)+'">' +
+        '<button type="button" class="rm-btn" data-action="rm-goal" data-index="'+i+'">삭제</button>' +
+      '</div>';
+    }).join("");
+  }
+
+  var SOAP_TAGS = [{key:"s",label:"S 주관적 정보",cls:"tag-s"},{key:"o",label:"O 객관적 정보",cls:"tag-o"},{key:"a",label:"A 사정",cls:"tag-a"},{key:"p",label:"P 계획",cls:"tag-p"}];
+
+  function renderSessions(){
+    sessionsList.innerHTML = state.sessions.map(function(sess, i){
+      var soapInputs = SOAP_TAGS.map(function(t){
+        return '<label class="soap-field"><span class="'+t.cls+'">'+t.label+'</span>' +
+          '<textarea data-array="sessions" data-index="'+i+'" data-soapkey="'+t.key+'">'+escapeHtml(sess.soap[t.key])+'</textarea></label>';
+      }).join("");
+      var scoreInputs = SCALES.map(function(sc){
+        return '<label class="score-field"><span>'+escapeHtml(sc.label)+'</span>' +
+          '<input type="number" step="0.1" data-array="sessions" data-index="'+i+'" data-scalekey="'+sc.key+'" value="'+escapeHtml(sess.scores[sc.key])+'"></label>';
+      }).join("");
+      return '<div class="dyn-row">' +
+        '<div class="dyn-grid">' +
+          '<span class="session-no">'+(i+1)+'회기</span>' +
+          '<input type="date" data-array="sessions" data-index="'+i+'" data-field="date" value="'+escapeHtml(sess.date)+'">' +
+        '</div>' +
+        '<div class="soap-grid">' + soapInputs + '</div>' +
+        '<div class="score-grid">' + scoreInputs + '</div>' +
+        '<div class="dyn-foot"><button type="button" class="rm-btn" data-action="rm-session" data-index="'+i+'">삭제</button></div>' +
+      '</div>';
+    }).join("");
+  }
+
+  var lastScaleKeySig = null;
+  function renderScaleNotesDOM(keys){
+    if(!keys.length){
+      scaleNotesArea.innerHTML = '<div class="muted-note">회기별 일지에 척도 점수를 입력하면, 해당 척도의 개별평가 입력란이 여기에 자동으로 나타나요.</div>';
+      return;
+    }
+    scaleNotesArea.innerHTML = keys.map(function(key){
+      var sc = SCALES.filter(function(x){ return x.key === key; })[0];
+      var label = sc.label + (sc.full && sc.full !== sc.label ? " (" + sc.full + ")" : "");
+      return '<div class="field"><label>'+escapeHtml(label)+' 개별평가</label>' +
+        '<textarea data-scalekey="'+key+'" placeholder="사전·사후 평가에 대한 해석을 적어주세요.">'+escapeHtml(state.scaleNotes[key]||"")+'</textarea></div>';
+    }).join("");
+  }
+  function maybeRenderScaleNotes(force){
+    var st = computeStats();
+    var keys = SCALES.filter(function(sc){ return st[sc.key].points.length > 0; }).map(function(sc){ return sc.key; });
+    var sig = keys.join(",");
+    if(!force && sig === lastScaleKeySig) return;
+    lastScaleKeySig = sig;
+    renderScaleNotesDOM(keys);
+  }
+
+  // ---------- computation ----------
+  function computeStats(){
+    var result = {};
+    SCALES.forEach(function(sc){
+      var points = [];
+      state.sessions.forEach(function(sess, i){
+        var raw = sess.scores ? sess.scores[sc.key] : "";
+        if(raw !== "" && raw != null && !isNaN(Number(raw))){
+          points.push({session:i+1, date:sess.date, value:Number(raw)});
+        }
+      });
+      result[sc.key] = {
+        points:points,
+        first: points.length ? points[0] : null,
+        last: points.length ? points[points.length-1] : null,
+        delta: points.length >= 2 ? points[points.length-1].value - points[0].value : null
+      };
+    });
+    var filledSessions = state.sessions.filter(function(sess){ return sess.date || sess.soap.s || sess.soap.o || sess.soap.a || sess.soap.p; });
+    var periodDays = null;
+    if(state.periodStart && state.periodEnd){
+      var d = Math.round((new Date(state.periodEnd) - new Date(state.periodStart)) / 86400000) + 1;
+      if(!isNaN(d) && d > 0) periodDays = d;
+    }
+    result._totalSessions = filledSessions.length;
+    result._periodDays = periodDays;
+    return result;
+  }
+
+  function buildTrend(points){
+    if(points.length < 2) return "";
+    var vals = points.map(function(p){ return p.value; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var range = (max - min) || 1;
+    var bars = points.map(function(p){
+      var h = 12 + Math.round(((p.value - min) / range) * 28);
+      return '<div class="tbar" style="height:'+h+'px" title="'+p.session+'회기 · '+(p.date?fmtDateDot(p.date):"")+' · '+p.value+'점"></div>';
+    }).join("");
+    var labels = points.map(function(p){ return '<div class="tlbl">'+p.value+'</div>'; }).join("");
+    return '<div class="trend-wrap"><div class="trend">'+bars+'</div><div class="trend-labels">'+labels+'</div></div>';
+  }
+
+  // ---------- preview rendering ----------
+  function renderPreview(){
+    var st = computeStats();
+    var periodText = "—";
+    if(state.periodStart || state.periodEnd){
+      periodText = (state.periodStart ? fmtDateDot(state.periodStart) : "—") +
+        (state.periodEnd ? " ~ " + fmtDateDot(state.periodEnd) : "") +
+        (st._totalSessions ? ", 총 " + st._totalSessions + "회기" : "");
+    }
+
+    var infoTable =
+      '<table class="info-table">' +
+        '<tr><th>프로그램</th><td colspan="3">'+escapeHtml(state.programName || "—")+'</td></tr>' +
+        '<tr><th>일&nbsp;&nbsp;시</th><td colspan="3">'+periodText+'</td></tr>' +
+        '<tr><th>장&nbsp;&nbsp;소</th><td>'+escapeHtml(state.location || "—")+'</td><th>강&nbsp;&nbsp;사</th><td>'+escapeHtml(state.instructor || "—")+'</td></tr>' +
+        '<tr><th>대&nbsp;&nbsp;상</th><td colspan="3">'+escapeHtml(state.clientInfo || "—")+'</td></tr>' +
+        '<tr><th>작성자</th><td colspan="3">'+escapeHtml(state.authorName || "—")+'</td></tr>' +
+      '</table>';
+
+    var goalsHtml = state.goals.filter(function(g){ return g; }).map(function(g){ return '<li>'+escapeHtml(g)+'</li>'; }).join("");
+
+    var sessRows = state.sessions.length ? state.sessions.map(function(sess, i){
+      var lines = "";
+      if(sess.soap.s) lines += '<div class="so-line"><b>S</b>'+escapeHtml(sess.soap.s)+'</div>';
+      if(sess.soap.o) lines += '<div class="so-line"><b>O</b>'+escapeHtml(sess.soap.o)+'</div>';
+      if(!lines) lines = '<span class="empty-note">—</span>';
+      var chips = SCALES.map(function(sc){
+        var v = sess.scores ? sess.scores[sc.key] : "";
+        if(v === "" || v == null) return "";
+        return '<span class="chip">'+escapeHtml(sc.label)+' '+escapeHtml(v)+'</span>';
+      }).join("");
+      return '<tr><td>'+(i+1)+'</td><td>'+escapeHtml(sess.date ? fmtDateDot(sess.date) : "—")+'</td>' +
+        '<td>'+lines+'</td>' +
+        '<td><div class="chip-cell">'+(chips || '<span class="empty-note">—</span>')+'</div></td></tr>';
+    }).join("") : '<tr><td colspan="4" class="empty-note">등록된 회기가 없습니다.</td></tr>';
+
+    var soapCards = state.sessions.map(function(sess, i){
+      if(!sess.date && !sess.soap.s && !sess.soap.o && !sess.soap.a && !sess.soap.p) return "";
+      var rows = SOAP_TAGS.map(function(t){
+        var v = sess.soap[t.key];
+        return '<div class="soap-row"><span class="soap-tag '+t.key+'">'+t.key.toUpperCase()+'</span>' +
+          '<p>'+(v ? escapeHtml(v) : '<span class="empty-note">기록 없음</span>')+'</p></div>';
+      }).join("");
+      return '<div class="soap-card"><div class="sc-head">'+(i+1)+'회기 · '+(sess.date?fmtDateDot(sess.date):"날짜 미입력")+'</div>'+rows+'</div>';
+    }).join("");
+    if(!soapCards) soapCards = '<div class="empty-note">등록된 상담기록이 없습니다.</div>';
+
+    var statTiles = '<div class="stat-tile"><div class="v">'+st._totalSessions+'</div><div class="l">총 회기 수</div></div>';
+    if(st._periodDays != null){
+      statTiles += '<div class="stat-tile"><div class="v">'+st._periodDays+'</div><div class="l">총 진행일수</div></div>';
+    }
+    SCALES.forEach(function(sc){
+      var s = st[sc.key];
+      if(s.points.length >= 2){
+        statTiles += '<div class="stat-tile"><div class="v">'+s.first.value+' → '+s.last.value+'</div><div class="l">'+escapeHtml(sc.label)+' (사전→사후)</div></div>';
+      }
+    });
+
+    var scaleBlocks = "";
+    SCALES.forEach(function(sc){
+      var s = st[sc.key];
+      if(!s.points.length) return;
+      var numsHtml;
+      if(s.points.length === 1){ numsHtml = s.points[0].value; }
+      else { numsHtml = s.first.value + ' → ' + s.last.value + ' <span class="delta">(' + fmtDelta(s.delta) + ')</span>'; }
+      var noteVal = state.scaleNotes[sc.key];
+      scaleBlocks +=
+        '<div class="scale-block">' +
+          '<div class="scale-head"><span class="scale-name">'+escapeHtml(sc.label)+(sc.full && sc.full !== sc.label ? ' <small>('+escapeHtml(sc.full)+')</small>' : '')+'</span>' +
+          '<span class="scale-nums">'+numsHtml+'</span></div>' +
+          buildTrend(s.points) +
+          '<div class="scale-note">'+(noteVal ? escapeHtml(noteVal) : '<span class="empty-note">개별평가를 입력해 주세요.</span>')+'</div>' +
+        '</div>';
+    });
+    if(!scaleBlocks) scaleBlocks = '<div class="empty-note">회기별 일지에 척도 점수를 입력하면 이곳에 사전·사후 평가가 자동으로 정리돼요.</div>';
+
+    sheet.innerHTML =
+      '<div class="doc-eyebrow">CASE MANAGEMENT RESULT REPORT</div>' +
+      '<h1 class="doc-title">'+escapeHtml(state.programName || "프로그램") + ' 결과보고서</h1>' +
+      '<div class="doc-sub">'+escapeHtml(state.clientInfo || "") + '</div>' +
+      '<div class="doc-rule"></div>' +
+
+      infoTable +
+
+      '<h2 class="sec"><span class="num">01</span>목적 및 목표</h2>' +
+      '<p class="body-text">'+(state.purpose ? escapeHtml(state.purpose) : '<span class="empty-note">목적을 입력해 주세요.</span>')+'</p>' +
+      (goalsHtml ? '<ol class="goal-list">'+goalsHtml+'</ol>' : '') +
+
+      '<h2 class="sec"><span class="num">02</span>진행일정 및 내용</h2>' +
+      '<table class="sess-table"><thead><tr><th style="width:44px">회기</th><th style="width:90px">날짜</th><th>내용(사실)</th><th style="width:170px">척도평가</th></tr></thead>' +
+      '<tbody>' + sessRows + '</tbody></table>' +
+
+      '<h2 class="sec"><span class="num">03</span>결과 요약</h2>' +
+      '<div class="stat-row">' + statTiles + '</div>' +
+
+      '<h2 class="sec"><span class="num">04</span>참여자 평가</h2>' + scaleBlocks +
+
+      '<h2 class="sec"><span class="num">05</span>진행자 평가</h2>' +
+      '<div class="review-block"><div class="rb-head"><h3>[프로그램 진행]</h3></div><p>'+(state.reviewProgress ? escapeHtml(state.reviewProgress) : '<span class="empty-note">—</span>')+'</p></div>' +
+      '<div class="review-block"><div class="rb-head"><h3>[증상 및 상태 변화]</h3></div><p>'+(state.reviewChange ? escapeHtml(state.reviewChange) : '<span class="empty-note">—</span>')+'</p></div>' +
+      '<div class="review-block"><div class="rb-head"><h3>[종합평가]</h3><button type="button" class="copy-mini" id="btnCopyOverall">복사</button></div><p>'+(state.reviewOverall ? escapeHtml(state.reviewOverall) : '<span class="empty-note">—</span>')+'</p></div>' +
+
+      '<h2 class="sec"><span class="num">06</span>회기별 상담기록 (SOAP)</h2>' + soapCards;
+
+    var overallBtn = document.getElementById("btnCopyOverall");
+    if(overallBtn){
+      overallBtn.addEventListener("click", function(){
+        copyToClipboard(state.reviewOverall || "", "종합평가를 복사했어요");
+      });
+    }
+  }
+
+  var renderQueued = false;
+  function scheduleRender(){
+    if(renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(function(){
+      renderQueued = false;
+      renderPreview();
+      maybeRenderScaleNotes(false);
+      saveDraft();
+    });
+  }
+
+  function setStatus(msg){
+    statusText.textContent = msg;
+    if(msg){
+      clearTimeout(setStatus._t);
+      setStatus._t = setTimeout(function(){ statusText.textContent = ""; }, 2600);
+    }
+  }
+
+  function copyToClipboard(text, okMsg){
+    if(!text){ setStatus("복사할 내용이 없어요"); return; }
+    function done(ok){ setStatus(ok ? (okMsg || "복사했어요") : "복사 실패"); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+  function fallbackCopy(text, cb){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      cb(ok);
+    }catch(e){ cb(false); }
+  }
+
+  function buildPlainTextReport(){
+    var st = computeStats();
+    var lines = [];
+    lines.push((state.programName || "프로그램") + " 결과보고서");
+    lines.push(state.clientInfo || "");
+    lines.push("");
+    lines.push("프로그램: " + (state.programName || "—"));
+    var periodText = (state.periodStart ? fmtDateDot(state.periodStart) : "—") +
+      (state.periodEnd ? " ~ " + fmtDateDot(state.periodEnd) : "") + (st._totalSessions ? ", 총 " + st._totalSessions + "회기" : "");
+    lines.push("일시: " + periodText);
+    lines.push("장소: " + (state.location || "—") + " / 강사: " + (state.instructor || "—"));
+    lines.push("대상: " + (state.clientInfo || "—"));
+    lines.push("작성자: " + (state.authorName || "—"));
+    lines.push("");
+    lines.push("[01 목적 및 목표]");
+    lines.push(state.purpose || "—");
+    state.goals.filter(function(g){return g;}).forEach(function(g,i){ lines.push((i+1)+") "+g); });
+    lines.push("");
+    lines.push("[02 진행일정 및 내용]");
+    state.sessions.forEach(function(sess,i){
+      var parts = [];
+      if(sess.soap.s) parts.push("S: "+sess.soap.s);
+      if(sess.soap.o) parts.push("O: "+sess.soap.o);
+      lines.push((i+1)+"회기 ("+(sess.date?fmtDateDot(sess.date):"—")+") "+(parts.join(" / ")||"—"));
+    });
+    lines.push("");
+    lines.push("[03 결과 요약]");
+    lines.push("총 회기 수: " + st._totalSessions + (st._periodDays!=null ? " / 총 진행일수: "+st._periodDays : ""));
+    lines.push("");
+    lines.push("[04 참여자 평가]");
+    SCALES.forEach(function(sc){
+      var s = st[sc.key];
+      if(!s.points.length) return;
+      var numsText = s.points.length===1 ? String(s.points[0].value) : (s.first.value+" → "+s.last.value+" ("+fmtDelta(s.delta)+")");
+      lines.push(sc.label + ": " + numsText);
+      if(state.scaleNotes[sc.key]) lines.push("  - " + state.scaleNotes[sc.key]);
+    });
+    lines.push("");
+    lines.push("[05 진행자 평가]");
+    lines.push("프로그램 진행: " + (state.reviewProgress || "—"));
+    lines.push("증상 및 상태 변화: " + (state.reviewChange || "—"));
+    lines.push("종합평가: " + (state.reviewOverall || "—"));
+    lines.push("");
+    lines.push("[06 회기별 상담기록 (SOAP)]");
+    state.sessions.forEach(function(sess,i){
+      if(!sess.date && !sess.soap.s && !sess.soap.o && !sess.soap.a && !sess.soap.p) return;
+      lines.push((i+1)+"회기 · "+(sess.date?fmtDateDot(sess.date):"날짜 미입력"));
+      lines.push("  S: " + (sess.soap.s||"—"));
+      lines.push("  O: " + (sess.soap.o||"—"));
+      lines.push("  A: " + (sess.soap.a||"—"));
+      lines.push("  P: " + (sess.soap.p||"—"));
+    });
+    return lines.join("\n");
+  }
+
+  // ---------- events ----------
+  formPane.addEventListener("input", function(e){
+    var t = e.target;
+    if(t.dataset.soapkey && t.dataset.array === "sessions"){
+      state.sessions[Number(t.dataset.index)].soap[t.dataset.soapkey] = t.value;
+      scheduleRender(); return;
+    }
+    if(t.dataset.scalekey && t.dataset.array === "sessions"){
+      state.sessions[Number(t.dataset.index)].scores[t.dataset.scalekey] = t.value;
+      scheduleRender(); return;
+    }
+    if(t.dataset.scalekey){
+      state.scaleNotes[t.dataset.scalekey] = t.value;
+      scheduleRender(); return;
+    }
+    if(t.dataset.array === "goals"){
+      state.goals[Number(t.dataset.index)] = t.value;
+      scheduleRender(); return;
+    }
+    var field = t.dataset.field;
+    if(!field) return;
+    if(t.dataset.array){
+      var arr = state[t.dataset.array];
+      var idx = Number(t.dataset.index);
+      if(arr && arr[idx]) arr[idx][field] = t.value;
+    } else {
+      state[field] = t.value;
+    }
+    scheduleRender();
+  });
+
+  formPane.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    var action = btn.dataset.action;
+    var idx = Number(btn.dataset.index);
+    if(action === "add-session"){
+      state.sessions.push(blankSession()); renderSessions(); scheduleRender(); maybeRenderScaleNotes(true);
+    } else if(action === "rm-session"){
+      state.sessions.splice(idx,1);
+      if(!state.sessions.length) state.sessions.push(blankSession());
+      renderSessions(); scheduleRender(); maybeRenderScaleNotes(true);
+    } else if(action === "add-goal"){
+      state.goals.push(""); renderGoals(); scheduleRender();
+    } else if(action === "rm-goal"){
+      state.goals.splice(idx,1);
+      if(!state.goals.length) state.goals.push("");
+      renderGoals(); scheduleRender();
+    }
+  });
+
+  document.getElementById("btnNew").addEventListener("click", function(){
+    if(!confirm("새로 작성하시겠어요? 저장하지 않은 내용은 사라져요.")) return;
+    state = blankState();
+    fillScalarInputs();
+    renderSessions(); renderGoals();
+    maybeRenderScaleNotes(true);
+    scheduleRender();
+    setStatus("새 양식을 시작했어요");
+  });
+
+  document.getElementById("btnSave").addEventListener("click", function(){
+    var id = saveReport(state);
+    state.id = id;
+    setStatus("저장됨 (이 브라우저에)");
+  });
+
+  document.getElementById("btnCopyAll").addEventListener("click", function(){
+    copyToClipboard(buildPlainTextReport(), "보고서 전체를 복사했어요");
+  });
+
+  document.getElementById("btnLoad").addEventListener("click", function(){
+    document.getElementById("loadModal").hidden = false;
+    var listEl = document.getElementById("reportList");
+    var reports = listReports();
+    if(!reports.length){
+      listEl.innerHTML = '<div class="empty-list">저장된 보고서가 없어요.<br>먼저 "저장" 버튼을 눌러보세요.</div>';
+      return;
+    }
+    listEl.innerHTML = reports.map(function(r){
+      var when = r.updatedAt ? new Date(r.updatedAt).toLocaleString("ko-KR") : "";
+      return '<div class="report-item" data-id="'+escapeHtml(r.id)+'">' +
+        '<div class="ri-main"><div class="ri-title">'+escapeHtml(r.programName || "(제목 없음)")+'</div>' +
+        '<div class="ri-sub">'+escapeHtml(r.clientInfo||"")+(r.clientInfo?" · ":"")+escapeHtml(when)+'</div></div>' +
+        '<button type="button" class="rm-btn" data-del="'+escapeHtml(r.id)+'">삭제</button>' +
+      '</div>';
+    }).join("");
+  });
+
+  document.getElementById("reportList").addEventListener("click", function(e){
+    var del = e.target.closest("[data-del]");
+    if(del){
+      e.stopPropagation();
+      if(!confirm("이 보고서를 삭제할까요?")) return;
+      deleteReportById(del.dataset.del);
+      document.getElementById("btnLoad").click();
+      return;
+    }
+    var item = e.target.closest(".report-item");
+    if(!item) return;
+    var data = loadReportById(item.dataset.id);
+    if(!data){ setStatus("불러오기 실패"); return; }
+    state = Object.assign(blankState(), data);
+    if(!state.scaleNotes) state.scaleNotes = blankScaleNotes();
+    if(!state.goals || !state.goals.length) state.goals = [""];
+    if(!state.sessions || !state.sessions.length) state.sessions = [blankSession()];
+    state.sessions.forEach(function(sess){
+      if(!sess.soap) sess.soap = {s:"",o:"",a:"",p:""};
+      if(!sess.scores) sess.scores = {mhsdr:"",pss:"",gol:"",krs:"",satisfaction:""};
+    });
+    fillScalarInputs();
+    renderSessions(); renderGoals();
+    maybeRenderScaleNotes(true);
+    scheduleRender();
+    document.getElementById("loadModal").hidden = true;
+    setStatus("불러왔어요");
+  });
+
+  document.getElementById("btnCloseModal").addEventListener("click", function(){
+    document.getElementById("loadModal").hidden = true;
+  });
+  document.getElementById("loadModal").addEventListener("click", function(e){
+    if(e.target.id === "loadModal") document.getElementById("loadModal").hidden = true;
+  });
+
+  document.getElementById("tabs").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-tab]");
+    if(!btn) return;
+    document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("active", b===btn); });
+    var ws = document.getElementById("workspace");
+    ws.classList.remove("tab-form","tab-preview");
+    ws.classList.add("tab-" + btn.dataset.tab);
+  });
+
+  // ---------- init ----------
+  fillScalarInputs();
+  renderSessions();
+  renderGoals();
+  maybeRenderScaleNotes(true);
+  renderPreview();
+})();
+</script>
+</body>
+</html>
